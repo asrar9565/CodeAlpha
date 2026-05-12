@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Advanced AI Stock Portfolio Tracker</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: white;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 950px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(12px);
+      border-radius: 25px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 38px;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #cbd5e1;
+      margin-bottom: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.06);
+      padding: 25px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      margin-top: 18px;
+      font-size: 16px;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      background: #f8fafc;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      cursor: pointer;
+      background: linear-gradient(to right, #06b6d4, #3b82f6);
+      color: white;
+      transition: 0.3s;
+      font-weight: bold;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+    }
+
+    .stats {
+      margin-top: 25px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.08);
+      padding: 18px;
+      border-radius: 15px;
+      text-align: center;
+    }
+
+    .stat-box h3 {
+      color: #94a3b8;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    .stat-box p {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    canvas {
+      margin-top: 20px;
+      background: white;
+      border-radius: 15px;
+      padding: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<button id="themeToggle" style="position:absolute;top:20px;right:20px;padding:10px 15px;border:none;border-radius:10px;cursor:pointer;font-weight:bold;">🌙 Toggle Theme</button>
+
+<div class="container">
+  <h1>📈 Advanced AI Stock Portfolio Tracker</h1>
+  <p class="subtitle">Track stocks with analytics, dark mode, pie charts & portfolio storage</p>
+
+  <div class="grid">
+
+    <div class="card">
+      <h2>Portfolio Calculator</h2>
+
+      <label>Select Stock</label>
+      <select id="stock">
+        <option value="180">AAPL - Apple ($180)</option>
+        <option value="250">TSLA - Tesla ($250)</option>
+        <option value="150">GOOG - Google ($150)</option>
+        <option value="320">MSFT - Microsoft ($320)</option>
+        <option value="140">AMZN - Amazon ($140)</option>
+      </select>
+
+      <label>Buy Price</label>
+      <input type="number" id="buyPrice" placeholder="Enter buy price">
+
+      <label>Current Price</label>
+      <input type="number" id="currentPrice" placeholder="Enter current market price">
+
+      <label>Enter Quantity</label>
+      <input type="number" id="quantity" placeholder="Enter quantity" min="1">
+
+      <button onclick="calculateInvestment()">Calculate Portfolio</button>
+      <button onclick="savePortfolio()" style="margin-top:10px;background:linear-gradient(to right,#10b981,#059669);">Save Portfolio</button>
+
+      <div class="stats">
+        <div class="stat-box">
+          <h3>Profit / Loss</h3>
+          <p id="profitLoss">$0</p>
+        </div>
+        <div class="stat-box">
+          <h3>Stock Price</h3>
+          <p id="price">$0</p>
+        </div>
+
+        <div class="stat-box">
+          <h3>Total Investment</h3>
+          <p id="total">$0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Investment Analytics</h2>
+      <canvas id="portfolioChart"></canvas>
+      <canvas id="pieChart"></canvas>
+
+      <div style="margin-top:20px;">
+        <h3>Saved Portfolio</h3>
+        <ul id="portfolioList" style="margin-top:10px;"></ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let chart;
+  let pieChart;
+
+  function calculateInvestment() {
+    const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+    const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+    const stock = document.getElementById('stock');
+    const quantity = parseInt(document.getElementById('quantity').value);
+
+    if (!quantity || quantity <= 0) {
+      alert('Please enter a valid quantity');
+      return;
+    }
+
+    const stockName = stock.options[stock.selectedIndex].text;
+    const stockPrice = parseInt(stock.value);
+    const totalInvestment = stockPrice * quantity;
+    const investedAmount = buyPrice * quantity;
+    const currentValue = currentPrice * quantity;
+    const profitLoss = currentValue - investedAmount;
+
+    document.getElementById('price').innerText = '$' + stockPrice;
+    document.getElementById('total').innerText = '$' + totalInvestment;
+    document.getElementById('profitLoss').innerText = '$' + profitLoss.toFixed(2);
+
+    updateChart(stockName, stockPrice, totalInvestment, investedAmount, currentValue);
+  }
+
+  function updateChart(stockName, stockPrice, totalInvestment, investedAmount, currentValue) {
+
+    const ctx = document.getElementById('portfolioChart').getContext('2d');
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Stock Price', 'Total Investment', 'Current Value'],
+        datasets: [{
+          label: stockName,
+          data: [stockPrice, totalInvestment, currentValue],
+          backgroundColor: [
+            '#06b6d4',
+            '#3b82f6'
+          ],
+          borderRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: {
+              color: 'black'
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+
+    if (pieChart) {
+      pieChart.destroy();
+    }
+
+    pieChart = new Chart(pieCtx, {
+      type: 'pie',
+      data: {
+        labels: ['Invested Amount', 'Current Value'],
+        datasets: [{
+          data: [investedAmount, currentValue],
+          backgroundColor: ['#8b5cf6', '#10b981']
+        }]
+      },
+      options: {
+        responsive: true
+      }
+    });
+  }
+
+  function savePortfolio() {
+    const stock = document.getElementById('stock');
+    const quantity = document.getElementById('quantity').value;
+
+    const item = stock.options[stock.selectedIndex].text + ' | Qty: ' + quantity;
+
+    let portfolios = JSON.parse(localStorage.getItem('portfolio')) || [];
+    portfolios.push(item);
+
+    localStorage.setItem('portfolio', JSON.stringify(portfolios));
+
+    loadPortfolio();
+  }
+
+  function loadPortfolio() {
+    const list = document.getElementById('portfolioList');
+    list.innerHTML = '';
+
+    let portfolios = JSON.parse(localStorage.getItem('portfolio')) || [];
+
+    portfolios.forEach(item => {
+      const li = document.createElement('li');
+      li.innerText = item;
+      li.style.margin = '10px 0';
+list.appendChild(li);
+    });
+  }
+
+  loadPortfolio();
+
+  const themeToggle = document.getElementById('themeToggle');
+
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+
+    if (document.body.classList.contains('light-mode')) {
+      document.body.style.background = 'linear-gradient(135deg,#f1f5f9,#cbd5e1)';
+      document.body.style.color = 'black';
+    } else {
+      document.body.style.background = 'linear-gradient(135deg,#0f172a,#1e293b)';
+      document.body.style.color = 'white';
+    }
+  });
+</script>
+
+</body>
+</html>
